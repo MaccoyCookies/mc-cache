@@ -3,7 +3,6 @@ package io.github.maccoycookies.mccache.core;
 import io.github.maccoycookies.mccache.McCache;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
@@ -45,29 +44,105 @@ public class McCacheHandler extends SimpleChannelInboundHandler<String> {
             bulkString(channelHandlerContext, cache.get(args[4]));
         } else if ("STRLEN".equals(command)) {
             String value = cache.get(args[4]);
-            intString(channelHandlerContext, value == null ? 0 : value.length());
+            integer(channelHandlerContext, value == null ? 0 : value.length());
         } else if ("DEL".equals(command)) {
             String[] arr = new String[(args.length - 3) / 2];
             for (int i = 0; i < arr.length; i++) {
                 arr[i] = args[4 + i * 2];
             }
-            intString(channelHandlerContext, cache.del(arr));
+            integer(channelHandlerContext, cache.del(arr));
         } else if ("EXISTS".equals(command)) {
             String[] arr = new String[(args.length - 3) / 2];
             for (int i = 0; i < arr.length; i++) {
                 arr[i] = args[4 + i * 2];
             }
-            intString(channelHandlerContext, cache.exists(arr));
+            integer(channelHandlerContext, cache.exists(arr));
+        } else if ("MGET".equals(command)) {
+            String[] arr = new String[(args.length - 3) / 2];
+            for (int i = 0; i < arr.length; i++) {
+                arr[i] = args[4 + i * 2];
+            }
+            array(channelHandlerContext, cache.mget(arr));
+        } else if ("MSET".equals(command)) {
+            int len = (args.length - 3) / 4;
+            String[] keys = new String[len];
+            String[] vals = new String[len];
+            for (int i = 0; i < len; i++) {
+                keys[i] = args[4 + i * 4];
+                vals[i] = args[6 + i * 4];
+            }
+            cache.mset(keys, vals);
+            simpleString(channelHandlerContext, OK);
+        } else if ("INCR".equals(command)) {
+            String key = args[4];
+            try {
+                integer(channelHandlerContext, cache.incr(key));
+            } catch (NumberFormatException exception) {
+                error(channelHandlerContext, "NFE " + key + " value[" + cache.get(key) + "] is not an integer");
+            }
+        } else if ("DECR".equals(command)) {
+            String key = args[4];
+            try {
+                integer(channelHandlerContext, cache.decr(key));
+            } catch (NumberFormatException exception) {
+                error(channelHandlerContext, "NFE " + key + " value[" + cache.get(key) + "] is not an integer");
+            }
         } else {
             simpleString(channelHandlerContext, OK);
         }
     }
 
-    private void intString(ChannelHandlerContext channelHandlerContext, Integer content) {
-        writeByteBuf(channelHandlerContext, ":" + content + CRLF);
+    private void error(ChannelHandlerContext channelHandlerContext, String content) {
+        writeByteBuf(channelHandlerContext, errorEncode(content));
+    }
+
+    private String errorEncode(String content) {
+        return "-" + content + CRLF;
+    }
+
+    private void integer(ChannelHandlerContext channelHandlerContext, Integer content) {
+        writeByteBuf(channelHandlerContext, integerEncode(content));
+    }
+
+    private String integerEncode(Integer content) {
+        return ":" + content + CRLF;
+    }
+
+    private void array(ChannelHandlerContext channelHandlerContext, String[] array) {
+        writeByteBuf(channelHandlerContext, arrayEncode(array));
+    }
+
+    private String arrayEncode(Object[] array) {
+        StringBuilder stringBuilder = new StringBuilder();
+        if (array == null) {
+            stringBuilder.append("*-1").append(CRLF);
+        } else if (array.length == 0) {
+            stringBuilder.append("*0").append(CRLF);
+        } else {
+            stringBuilder.append("*").append(array.length).append(CRLF);
+            for (Object arr : array) {
+                if (arr == null) {
+                    stringBuilder.append("$-1" + CRLF);
+                } else if (arr instanceof Integer integer) {
+                    stringBuilder.append(integerEncode(integer));
+                } else if (arr instanceof String string) {
+                    stringBuilder.append(bulkStringEncode(string));
+                } else if (arr instanceof Object[] objects) {
+                    stringBuilder.append(arrayEncode(objects));
+                } else {
+
+                }
+            }
+        }
+        return stringBuilder.toString();
     }
 
     private void bulkString(ChannelHandlerContext channelHandlerContext, String content) {
+        String res = bulkStringEncode(content);
+        writeByteBuf(channelHandlerContext, res);
+    }
+
+    private String bulkStringEncode(String content) {
         String res;
         if (content == null) {
             res = "$-1";
@@ -76,10 +151,14 @@ public class McCacheHandler extends SimpleChannelInboundHandler<String> {
         } else {
             res = BULK_PREFIX + content.getBytes().length + CRLF + content;
         }
-        writeByteBuf(channelHandlerContext, res + CRLF);
+        return res + CRLF;
     }
 
     private void simpleString(ChannelHandlerContext channelHandlerContext, String content) {
+        writeByteBuf(channelHandlerContext, simpleStringEncode(content));
+    }
+
+    private String simpleStringEncode(String content) {
         String res;
         if (content == null) {
             res = "$-1";
@@ -88,7 +167,7 @@ public class McCacheHandler extends SimpleChannelInboundHandler<String> {
         } else {
             res = STRING_PREFIX + content;
         }
-        writeByteBuf(channelHandlerContext, res + CRLF);
+        return res + CRLF;
     }
 
     private void writeByteBuf(ChannelHandlerContext channelHandlerContext, String content) {
