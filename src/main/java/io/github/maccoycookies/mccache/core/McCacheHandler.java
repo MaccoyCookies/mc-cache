@@ -20,7 +20,16 @@ public class McCacheHandler extends SimpleChannelInboundHandler<String> {
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, String message) throws Exception {
         String[] args = message.split(CRLF);
         System.out.println("McCacheHandler => " + String.join(",", args));
+
         String command = args[2].toUpperCase();
+        Command commandExecutor = Commands.get(command);
+        if (commandExecutor != null) {
+            Reply<?> reply = commandExecutor.exec(cache, args);
+            System.out.println("CMD[" + command + "] => " + reply.getType() + " => " + reply.getValue());
+            replyContext(channelHandlerContext, reply);
+            return;
+        }
+
         if ("COMMAND".equals(command)) {
             writeByteBuf(channelHandlerContext,
                     "*2" + CRLF +
@@ -28,15 +37,14 @@ public class McCacheHandler extends SimpleChannelInboundHandler<String> {
                             "COMMAND" + CRLF +
                             "$4" + CRLF +
                             "PING" + CRLF);
-        } else if ("PING".equals(command)) {
-            String ret = "PONG";
-            if (args.length >= 5) {
-                ret = args[4];
-            }
-            simpleString(channelHandlerContext, ret);
-        } else if ("INFO".equals(command)) {
-            // writeByteBuf(channelHandlerContext, "$" + INFO.getBytes().length + CRLF + INFO + CRLF);
-            bulkString(channelHandlerContext, INFO);
+        // } else if ("PING".equals(command)) {
+        //     String ret = "PONG";
+        //     if (args.length >= 5) {
+        //         ret = args[4];
+        //     }
+        //     simpleString(channelHandlerContext, ret);
+        // } else if ("INFO".equals(command)) {
+        //     bulkString(channelHandlerContext, INFO);
         } else if ("SET".equals(command)) {
             cache.set(args[4], args[6]);
             simpleString(channelHandlerContext, OK);
@@ -90,6 +98,29 @@ public class McCacheHandler extends SimpleChannelInboundHandler<String> {
         } else {
             simpleString(channelHandlerContext, OK);
         }
+    }
+
+    private void replyContext(ChannelHandlerContext channelHandlerContext, Reply<?> reply) {
+        switch (reply.getType()) {
+            case INT:
+                integer(channelHandlerContext, (Integer) reply.getValue());
+                break;
+            case ERROR:
+                error(channelHandlerContext, (String) reply.getValue());
+                break;
+            case SIMPLE_STRING:
+                simpleString(channelHandlerContext, (String) reply.getValue());
+                break;
+            case BULK_STRING:
+                bulkString(channelHandlerContext, (String) reply.getValue());
+                break;
+            case ARRAY:
+                array(channelHandlerContext, (String[]) reply.getValue());
+                break;
+            default:
+                simpleString(channelHandlerContext, OK);
+        }
+
     }
 
     private void error(ChannelHandlerContext channelHandlerContext, String content) {
