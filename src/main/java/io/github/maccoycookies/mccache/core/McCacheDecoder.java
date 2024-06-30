@@ -1,4 +1,4 @@
-package io.github.maccoycookies.mccache;
+package io.github.maccoycookies.mccache.core;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
