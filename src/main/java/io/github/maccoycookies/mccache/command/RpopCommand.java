@@ -7,7 +7,7 @@ import io.github.maccoycookies.mccache.core.Reply;
 public class RpopCommand implements Command {
 
     public String name() {
-        return "LPOP";
+        return "RPOP";
     }
 
     @Override
