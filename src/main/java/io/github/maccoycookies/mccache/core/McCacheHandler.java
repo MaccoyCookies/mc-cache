@@ -27,76 +27,9 @@ public class McCacheHandler extends SimpleChannelInboundHandler<String> {
             Reply<?> reply = commandExecutor.exec(cache, args);
             System.out.println("CMD[" + command + "] => " + reply.getType() + " => " + reply.getValue());
             replyContext(channelHandlerContext, reply);
-            return;
-        }
-
-        if ("COMMAND".equals(command)) {
-            writeByteBuf(channelHandlerContext,
-                    "*2" + CRLF +
-                            "$7" + CRLF +
-                            "COMMAND" + CRLF +
-                            "$4" + CRLF +
-                            "PING" + CRLF);
-        // } else if ("PING".equals(command)) {
-        //     String ret = "PONG";
-        //     if (args.length >= 5) {
-        //         ret = args[4];
-        //     }
-        //     simpleString(channelHandlerContext, ret);
-        // } else if ("INFO".equals(command)) {
-        //     bulkString(channelHandlerContext, INFO);
-        } else if ("SET".equals(command)) {
-            cache.set(args[4], args[6]);
-            simpleString(channelHandlerContext, OK);
-        } else if ("GET".equals(command)) {
-            bulkString(channelHandlerContext, cache.get(args[4]));
-        } else if ("STRLEN".equals(command)) {
-            String value = cache.get(args[4]);
-            integer(channelHandlerContext, value == null ? 0 : value.length());
-        } else if ("DEL".equals(command)) {
-            String[] arr = new String[(args.length - 3) / 2];
-            for (int i = 0; i < arr.length; i++) {
-                arr[i] = args[4 + i * 2];
-            }
-            integer(channelHandlerContext, cache.del(arr));
-        } else if ("EXISTS".equals(command)) {
-            String[] arr = new String[(args.length - 3) / 2];
-            for (int i = 0; i < arr.length; i++) {
-                arr[i] = args[4 + i * 2];
-            }
-            integer(channelHandlerContext, cache.exists(arr));
-        } else if ("MGET".equals(command)) {
-            String[] arr = new String[(args.length - 3) / 2];
-            for (int i = 0; i < arr.length; i++) {
-                arr[i] = args[4 + i * 2];
-            }
-            array(channelHandlerContext, cache.mget(arr));
-        } else if ("MSET".equals(command)) {
-            int len = (args.length - 3) / 4;
-            String[] keys = new String[len];
-            String[] vals = new String[len];
-            for (int i = 0; i < len; i++) {
-                keys[i] = args[4 + i * 4];
-                vals[i] = args[6 + i * 4];
-            }
-            cache.mset(keys, vals);
-            simpleString(channelHandlerContext, OK);
-        } else if ("INCR".equals(command)) {
-            String key = args[4];
-            try {
-                integer(channelHandlerContext, cache.incr(key));
-            } catch (NumberFormatException exception) {
-                error(channelHandlerContext, "NFE " + key + " value[" + cache.get(key) + "] is not an integer");
-            }
-        } else if ("DECR".equals(command)) {
-            String key = args[4];
-            try {
-                integer(channelHandlerContext, cache.decr(key));
-            } catch (NumberFormatException exception) {
-                error(channelHandlerContext, "NFE " + key + " value[" + cache.get(key) + "] is not an integer");
-            }
         } else {
-            simpleString(channelHandlerContext, OK);
+            Reply<?> reply = Reply.error("ERR unsupported command '" + command + "'");
+            replyContext(channelHandlerContext, reply);
         }
     }
 

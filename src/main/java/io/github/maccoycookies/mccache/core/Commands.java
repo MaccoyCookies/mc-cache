@@ -1,10 +1,6 @@
 package io.github.maccoycookies.mccache.core;
 
-import io.github.maccoycookies.mccache.command.CommandCommand;
-import io.github.maccoycookies.mccache.command.GetCommand;
-import io.github.maccoycookies.mccache.command.InfoCommand;
-import io.github.maccoycookies.mccache.command.PingCommand;
-import io.github.maccoycookies.mccache.command.SetCommand;
+import io.github.maccoycookies.mccache.command.*;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -31,6 +27,23 @@ public class Commands {
         // String
         register(new SetCommand());
         register(new GetCommand());
+        register(new StrlenCommand());
+        register(new DelCommand());
+        register(new ExistsCommand());
+        register(new IncrCommand());
+        register(new DecrCommand());
+        register(new MgetCommand());
+        register(new MsetCommand());
+
+        // List
+        // Lpush Rpush Lpop Rpop Lindex Lrange
+        register(new LpushCommand());
+        register(new LpopCommand());
+        register(new RpushCommand());
+        register(new RpopCommand());
+        register(new LlenCommand());
+        register(new LindexCommand());
+        register(new LrangeCommand());
 
     }
 
