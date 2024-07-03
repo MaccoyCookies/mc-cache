@@ -45,6 +45,20 @@ public class Commands {
         register(new LindexCommand());
         register(new LrangeCommand());
 
+        // set
+        register(new SaddCommand());
+        register(new SmembersCommand());
+        register(new SismembersCommand());
+        register(new SremCommand());
+        register(new ScardCommand());
+        register(new SpopCommand());
+
+
+        // hash
+
+
+        // zset
+
     }
 
     public static void register(Command command) {
