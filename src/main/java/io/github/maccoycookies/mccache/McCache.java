@@ -3,6 +3,7 @@ package io.github.maccoycookies.mccache;
 import lombok.*;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 /**
  * cache entries
@@ -216,8 +217,65 @@ public class McCache {
         return res;
     }
 
-
     // ========================== Set end ==========================
+
+    // ========================== Hash start ==========================
+
+    public Integer hset(String key, String[] hkeys, String[] hvals) {
+        if (hkeys == null || hkeys.length == 0) return 0;
+        if (hvals == null || hvals.length == 0) return 0;
+        CacheEntry<LinkedHashMap<String, String>> entry = (CacheEntry<LinkedHashMap<String, String>>) map.get(key);
+        if (entry == null) {
+            entry = new CacheEntry<>(new LinkedHashMap<>());
+            this.map.put(key, entry);
+        }
+        LinkedHashMap<String, String> exists = entry.getValue();
+        for (int i = 0; i < hkeys.length; i++) {
+            exists.put(hkeys[i], hvals[i]);
+        }
+        return hkeys.length;
+    }
+
+    public String hget(String key, String hkey) {
+        CacheEntry<LinkedHashMap<String, String>> entry = (CacheEntry<LinkedHashMap<String, String>>) map.get(key);
+        if (entry == null) return null;
+        return entry.getValue().get(hkey);
+    }
+
+    public String[] hgetall(String key) {
+        CacheEntry<LinkedHashMap<String, String>> entry = (CacheEntry<LinkedHashMap<String, String>>) map.get(key);
+        if (entry == null) return null;
+        return entry.getValue().entrySet().stream()
+                .flatMap(e -> Stream.of(e.getKey(), e.getValue())).toArray(String[]::new);
+    }
+
+    public String[] hmget(String key, String[] hkeys) {
+        CacheEntry<LinkedHashMap<String, String>> entry = (CacheEntry<LinkedHashMap<String, String>>) map.get(key);
+        if (entry == null) return null;
+        return hkeys == null ? new String[0] :
+                Arrays.stream(hkeys).map(entry.getValue()::get).toArray(String[]::new);
+    }
+
+    public Integer hlen(String key) {
+        CacheEntry<LinkedHashMap<String, String>> entry = (CacheEntry<LinkedHashMap<String, String>>) map.get(key);
+        if (entry == null) return 0;
+        return entry.getValue().size();
+    }
+
+    public Integer hexists(String key, String hkey) {
+        CacheEntry<LinkedHashMap<String, String>> entry = (CacheEntry<LinkedHashMap<String, String>>) map.get(key);
+        if (entry == null) return 0;
+        return entry.getValue().containsKey(hkey) ? 1 : 0;
+    }
+
+    public Integer hdel(String key, String[] hkeys) {
+        CacheEntry<LinkedHashMap<String, String>> entry = (CacheEntry<LinkedHashMap<String, String>>) map.get(key);
+        if (entry == null) return 0;
+        return hkeys == null ? 0 :
+                (int) Arrays.stream(hkeys).map(entry.getValue()::remove).filter(Objects::nonNull).count();
+    }
+
+    // ========================== Hash end ==========================
 
     @Data
     @NoArgsConstructor

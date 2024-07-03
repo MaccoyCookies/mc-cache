@@ -24,9 +24,14 @@ public class McCacheHandler extends SimpleChannelInboundHandler<String> {
         String command = args[2].toUpperCase();
         Command commandExecutor = Commands.get(command);
         if (commandExecutor != null) {
-            Reply<?> reply = commandExecutor.exec(cache, args);
-            System.out.println("CMD[" + command + "] => " + reply.getType() + " => " + reply.getValue());
-            replyContext(channelHandlerContext, reply);
+            try {
+                Reply<?> reply = commandExecutor.exec(cache, args);
+                System.out.println("CMD[" + command + "] => " + reply.getType() + " => " + reply.getValue());
+                replyContext(channelHandlerContext, reply);
+            } catch (Exception exception) {
+                Reply<?> reply = Reply.error("EXP exception with msg: '" + exception.getMessage() + "'");
+                replyContext(channelHandlerContext, reply);
+            }
         } else {
             Reply<?> reply = Reply.error("ERR unsupported command '" + command + "'");
             replyContext(channelHandlerContext, reply);
